@@ -1,21 +1,248 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1>Hello this is Kushal Dahal</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Chat</title>
+    <style>
+      :root {
+        --bg: #e6edf1;
+        --panel: #ffffff;
+        --ink: #16222b;
+        --muted: #667985;
+        --line: #d3dde3;
+        --accent: #0f766e;
+        --accent-ink: #ffffff;
+        --mine: #0f766e;
+        --mine-ink: #ffffff;
+        --theirs: #eef3f6;
+        --ok: #16a34a;
+        --bad: #dc2626;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e161b;
+          --panel: #17222a;
+          --ink: #e5edf1;
+          --muted: #8ba0ad;
+          --line: #263640;
+          --accent: #2dd4bf;
+          --accent-ink: #062622;
+          --mine: #2dd4bf;
+          --mine-ink: #062622;
+          --theirs: #213039;
+        }
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+
+      .chat {
+        width: 100%;
+        max-width: 560px;
+        height: min(720px, 100%);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .chat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+      .chat-header h1 { margin: 0; font-size: 1.1rem; font-weight: 650; }
+      .chat-header p { margin: 2px 0 0; font-size: 0.85rem; color: var(--muted); }
+
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .status::before {
+        content: "";
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .status.online::before { background: var(--ok); }
+      .status.offline::before { background: var(--bad); }
+
+      #message-List {
+        list-style: none;
+        margin: 0;
+        padding: 20px;
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .empty {
+        margin: auto;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.95rem;
+        max-width: 28ch;
+        line-height: 1.5;
+      }
+
+      .msg {
+        max-width: 80%;
+        padding: 9px 14px;
+        border-radius: 14px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+        background: var(--theirs);
+        align-self: flex-start;
+        border-bottom-left-radius: 4px;
+      }
+      .msg.mine {
+        background: var(--mine);
+        color: var(--mine-ink);
+        align-self: flex-end;
+        border-bottom-left-radius: 14px;
+        border-bottom-right-radius: 4px;
+      }
+
+      .composer {
+        display: flex;
+        gap: 10px;
+        padding: 14px 16px;
+        border-top: 1px solid var(--line);
+      }
+      #message-Input {
+        flex: 1;
+        min-width: 0;
+        font: inherit;
+        color: var(--ink);
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 11px 14px;
+      }
+      #message-Input::placeholder { color: var(--muted); }
+      #send-Button {
+        font: inherit;
+        font-weight: 600;
+        color: var(--accent-ink);
+        background: var(--accent);
+        border: 0;
+        border-radius: 10px;
+        padding: 0 20px;
+        cursor: pointer;
+      }
+      #send-Button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+      #message-Input:focus-visible,
+      #send-Button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="chat">
+      <header class="chat-header">
+        <div>
+          <h1>Live chat</h1>
+          <p>Hello, this is Kushal Dahal</p>
+        </div>
+        <div id="status" class="status">Connecting…</div>
+      </header>
+
+      <ul id="message-List">
+        <li class="empty" id="empty">No messages yet. Send the first one.</li>
+      </ul>
+
+      <div class="composer">
+        <input
+          type="text"
+          placeholder="Enter your message"
+          id="message-Input"
+          autocomplete="off"
+          disabled
+        />
+        <button id="send-Button" disabled>Send</button>
+      </div>
+    </main>
+
     <script>
-        const {port} = window.location
-        const connection = new WebSocket(`ws://localhost:${port}`)
-        connection.onopen=(()=>{
-            connection.send("Hello rajat dalal")
-            connection.onmessage = (message) =>{
-                console.log(message)
-            }
-        })
+      const messageInput = document.getElementById("message-Input");
+      const sendButton = document.getElementById("send-Button");
+      const messageList = document.getElementById("message-List");
+      const statusEl = document.getElementById("status");
+
+      // Random id so we can tell our own messages apart from others'
+      const clientId = Math.random().toString(36).slice(2);
+
+      const protocol = location.protocol === "https:" ? "wss" : "ws";
+      const connection = new WebSocket(`${protocol}://${location.host}`);
+
+      function setStatus(text, state) {
+        statusEl.textContent = text;
+        statusEl.className = `status ${state}`;
+        const online = state === "online";
+        messageInput.disabled = !online;
+        sendButton.disabled = !online;
+        if (online) messageInput.focus();
+      }
+
+      function addMessage(text, mine) {
+        const empty = document.getElementById("empty");
+        if (empty) empty.remove();
+
+        const li = document.createElement("li");
+        li.className = mine ? "msg mine" : "msg";
+        li.textContent = text;
+        messageList.appendChild(li);
+        messageList.scrollTop = messageList.scrollHeight;
+      }
+
+      function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text || connection.readyState !== WebSocket.OPEN) return;
+        connection.send(JSON.stringify({ messages: text, sender: clientId }));
+        messageInput.value = "";
+      }
+
+      connection.onopen = () => setStatus("Connected", "online");
+      connection.onclose = () => setStatus("Disconnected", "offline");
+      connection.onerror = () => setStatus("Connection error", "offline");
+
+      connection.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          addMessage(data.messages, data.sender === clientId);
+        } catch {
+          // ignore anything that isn't valid JSON
+        }
+      };
+
+      sendButton.addEventListener("click", sendMessage);
+      messageInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendMessage();
+      });
     </script>
-</body>
+  </body>
 </html>
